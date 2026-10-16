@@ -14,23 +14,4 @@
 - Unity 6000.5.10f1
 - Photon PUN 2 (2.56)
 
-## 처음 받았을 때 : Photon AppId 설정
 
-이 저장소에는 Photon AppId가 들어 있지 않습니다. 직접 만든 AppId를 넣어야 접속됩니다.
-
-1. https://dashboard.photonengine.com 에서 **Photon PUN** 타입 앱을 만들고 AppId 복사
-2. Unity 메뉴 **Window → Photon Unity Networking → Highlight Server Settings**
-3. **App Id PUN** 에 붙여넣기 (Fixed Region 은 `kr` 로 되어 있음)
-4. AppId가 실수로 커밋되지 않도록, 터미널에서 한 번 실행
-   ```
-   git update-index --skip-worktree Assets/Photon/PhotonUnityNetworking/Resources/PhotonServerSettings.asset
-   ```
-   (서버 설정을 정말로 바꿔서 커밋해야 할 때는 `--no-skip-worktree` 로 풀고, AppId를 지운 뒤 커밋)
-
-## 혼자 테스트
-`Assets/01.Scenes/scBattleField` 를 열고 Play → 서버 접속 없이 오프라인 모드로 플레이
-
-## 문서
-- [Docs/01_Lobby_Setup.md](Docs/01_Lobby_Setup.md) : 로비
-- [Docs/02_Room_Setup.md](Docs/02_Room_Setup.md) : 방 화면
-- [Docs/03_Battle_Setup.md](Docs/03_Battle_Setup.md) : 배틀필드 (규칙, 조작, 네트워크 구조)
