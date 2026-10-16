@@ -271,7 +271,15 @@ public class BattleManager : MonoBehaviourPunCallbacks
         //3. 카메라는 맞은 곳을 잠시 보여줌
         battleCamera.HoldAt(point);
 
-        //4. 피해 : 각자 "내 탱크"만 계산해서 체력을 보냄
+        //4. 엄폐물(건물, 바위) 피해 : 모두가 같은 위치로 계산하므로 각자 처리해도 결과가 같음
+        foreach (Destructible d in Destructible.All.ToArray())
+        {
+            float dist = d.DistanceTo(point);
+            if (dist < s.damageRadius)
+                d.TakeDamage(Mathf.RoundToInt(s.damage * Mathf.Lerp(1f, 0.3f, dist / s.damageRadius)));
+        }
+
+        //5. 탱크 피해 : 각자 "내 탱크"만 계산해서 체력을 보냄
         foreach (TankController t in Tanks)
         {
             if (t == null || !t.photonView.IsMine || !t.Health.IsAlive) continue;
