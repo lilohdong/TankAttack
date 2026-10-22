@@ -90,7 +90,8 @@ public class BattleUI : MonoBehaviour
                 TankController cur = bm.FindTank(bm.CurrentActor);
                 string name = cur != null ? cur.OwnerName : "?";
                 turnText.text = bm.CurrentActor == PhotonNetwork.LocalPlayer.ActorNumber ? "내 턴" : $"{name} 님의 턴";
-                timerText.text = bm.Phase == TurnPhase.Playing ? Mathf.CeilToInt(bm.TimeLeft).ToString() : "";
+                //연습장은 시간 제한이 없어서 타이머를 숨김
+                timerText.text = bm.Phase == TurnPhase.Playing && !bm.trainingMode ?Mathf.CeilToInt(bm.TimeLeft).ToString() : "";
                 timerText.color = bm.TimeLeft <= 10f ? new Color(1f, 0.35f, 0.3f) : Color.white;
                 break;
         }

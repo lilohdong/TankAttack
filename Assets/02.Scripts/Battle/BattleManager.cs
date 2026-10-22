@@ -40,6 +40,12 @@ public class BattleManager : MonoBehaviourPunCallbacks
     public TerrainDeformer terrainDeformer;
     public BattleCamera battleCamera;
 
+    [Header("연습장 (scTraining에서만 체크)")]
+    public bool trainingMode;           //시간 제한 없음, 정찰 표시 유지, 결과 문구 변경
+
+    //폭발할 때마다 모든 클라이언트에서 호출 (연습장이 어떤 포탄으로 맞혔는지 확인할 때 사용)
+    public static event System.Action<ShellType, Vector3> Exploded;
+
     public TurnPhase Phase { get; private set; } = TurnPhase.Waiting;
     public int CurrentActor { get; private set; } = -1;   //지금 턴인 플레이어의 ActorNumber
     public int TurnNumber { get; private set; }
@@ -168,7 +174,9 @@ public class BattleManager : MonoBehaviourPunCallbacks
         if (actor == PhotonNetwork.LocalPlayer.ActorNumber)
         {
             //정찰 효과는 내 다음 턴이 올 때까지만
-            MinimapController.Instance.SetReveal(false);
+            //(연습장은 혼자라서 다음 턴이 바로 내 턴 → 여기서 끄지 않고 TrainingManager가 끔)
+            if (!trainingMode)
+                MinimapController.Instance.SetReveal(false);
             if (TankController.Local != null)
                 TankController.Local.OnMyTurnStart();
             BattleUI.Instance.ShowNotice("내 턴입니다!", 2f);
@@ -197,6 +205,8 @@ public class BattleManager : MonoBehaviourPunCallbacks
 
     void Update()
     {
+        if (trainingMode) return; //연습장은 시간 제한 없음
+
         if (Phase == TurnPhase.Playing && IsMyTurn && TimeLeft <= 0f && TankController.Local != null)
             TankController.Local.OnTimeUp();
 
@@ -251,6 +261,7 @@ public class BattleManager : MonoBehaviourPunCallbacks
     void RPC_Explode(byte typeByte, Vector3 point, int shooterActor)
     {
         ShellSettings s = GetSettings((ShellType)typeByte);
+        Exploded?.Invoke((ShellType)typeByte, point);
 
         //아직 날고 있는 시각용 포탄 정리 (다른 사람 화면의 포탄은 살짝 다른 곳에 맞았을 수 있음)
         foreach (Shell shell in Shell.Active.ToArray())
@@ -322,6 +333,11 @@ public class BattleManager : MonoBehaviourPunCallbacks
         bool iWon = winnerActor == PhotonNetwork.LocalPlayer.ActorNumber;
         string result = winner == null ? "무승부" : (iWon ? "승리!" : "패배...");
         string detail = winner == null ? "살아남은 탱크가 없습니다" : $"최후의 생존자 : {winner.NickName}";
+        if (trainingMode)
+        {
+            result = "연습 실패";
+            detail = "내 탱크가 파괴되었습니다. 다시 도전해 보세요!";
+        }
         BattleUI.Instance.ShowGameOver(result, detail);
 
         TankController winTank = FindTank(winnerActor);
@@ -331,6 +347,15 @@ public class BattleManager : MonoBehaviourPunCallbacks
         //방장이 잠시 뒤 모두를 방 화면으로 데려감 (버튼으로 바로 갈 수도 있음)
         if (PhotonNetwork.IsMasterClient)
             StartCoroutine(ReturnAfter(10f));
+    }
+
+    //연습장의 모든 단계를 끝냈을 때 (TrainingManager가 호출)
+    public void EndTraining(string result, string detail)
+    {
+        Phase = TurnPhase.GameOver;
+        BattleUI.Instance.ShowGameOver(result, detail);
+        if (TankController.Local != null)
+            battleCamera.FollowTank(TankController.Local.transform);
     }
 
     IEnumerator ReturnAfter(float delay)

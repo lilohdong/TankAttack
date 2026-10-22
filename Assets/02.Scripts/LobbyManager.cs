@@ -3,6 +3,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 //타이틀(닉네임) → 로비(방 목록 / 방 만들기 / 랜덤 참가) → 방
@@ -13,6 +14,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     const int maxPlayers = 4;           //방 최대 인원
     const int maxNicknameLength = 12;
     const string nicknameKey = "Nickname"; //PlayerPrefs 저장 키
+    const string trainingScene = "scTraining";
 
     [Header("패널")]
     public GameObject titlePanel;
@@ -27,6 +29,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     [Header("타이틀")]
     public TMP_InputField nicknameInput;
     public Button startButton;
+    public Button trainingButton;       //혼자 연습장으로 (서버 접속 없이)
 
     [Header("로비")]
     public Button createRoomButton;
@@ -45,7 +48,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     Dictionary<string, RoomInfo> cachedRooms = new Dictionary<string, RoomInfo>();
     //화면에 만들어진 방 목록 오브젝트
     List<GameObject> roomItems = new List<GameObject>();
-
+    bool goingToTraining; //연습장으로 가려고 접속을 끊는 중
     void Awake()
     {
         //방장이 PhotonNetwork.LoadLevel을 호출하면 방 안의 모두가 같은 씬으로 이동
@@ -60,6 +63,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         nicknameInput.characterLimit = maxNicknameLength;
 
         startButton.onClick.AddListener(OnClickStart);
+        trainingButton.onClick.AddListener(OnClickTraining);
         createRoomButton.onClick.AddListener(() => createRoomPopup.SetActive(true));
         randomJoinButton.onClick.AddListener(OnClickRandomJoin);
         backButton.onClick.AddListener(OnClickBack);
@@ -107,6 +111,28 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         {
             SetServerStatus("접속 중...");
             PhotonNetwork.ConnectUsingSettings(); //PhotonServerSettings의 AppId로 접속
+        }
+    }
+
+    void OnClickTraining()
+    {
+        //닉네임을 적었으면 연습장 탱크 머리 위에도 그 이름을 씀
+        string nickname = nicknameInput.text.Trim();
+        if (!string.IsNullOrEmpty(nickname))
+            PlayerPrefs.SetString(nicknameKey, nickname);
+
+        startButton.interactable = false;
+        trainingButton.interactable = false;
+
+        //연습장은 Photon 오프라인 모드로 돌아감 → 서버에 접속된 상태면 먼저 끊어야 함
+        if (PhotonNetwork.IsConnected)
+        {
+            goingToTraining = true;
+            PhotonNetwork.Disconnect(); //끊기면 OnDisconnected에서 씬 이동
+        }
+        else
+        {
+            SceneManager.LoadScene(trainingScene);
         }
     }
 
@@ -172,6 +198,11 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     public override void OnDisconnected(DisconnectCause cause)
     {
+        if (goingToTraining)
+        {
+            SceneManager.LoadScene(trainingScene);
+            return;
+        }
         ClearRoomList();
         ShowPanel(titlePanel);
         startButton.interactable = true;

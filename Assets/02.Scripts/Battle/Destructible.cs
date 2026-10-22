@@ -11,6 +11,8 @@ public class Destructible : MonoBehaviour
     public int hp = 60;
     public float effectScale = 2f;
 
+    public event System.Action<Destructible> Broken; //부서질 때 알림 (연습장 표적에서 사용)
+
     Collider col;
 
     void Awake()
@@ -43,6 +45,7 @@ public class Destructible : MonoBehaviour
             fx.transform.localScale *= effectScale;
             Destroy(fx, 2f);
         }
+        Broken?.Invoke(this);
         Destroy(gameObject);
     }
 }
